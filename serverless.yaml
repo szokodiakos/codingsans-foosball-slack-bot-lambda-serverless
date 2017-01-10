@@ -1,0 +1,25 @@
+service: codingsans-food-slack-bot
+
+provider:
+  name: aws
+  runtime: nodejs4.3
+  stage: dev
+  region: eu-west-1
+
+plugins:
+  - serverless-webpack
+
+custom:
+  webpack: ./webpack.config.js
+  webpackIncludeModules: true
+
+functions:
+  food:
+    handler: handler.food
+    environment:
+      SLACK_WEBHOOK: ${env:SLACK_WEBHOOK, file(.env.yaml):SLACK_WEBHOOK}
+      SLACK_CHANNEL: ${env:SLACK_CHANNEL, file(.env.yaml):SLACK_CHANNEL}
+      FB_ACCESS_TOKEN: ${env:FB_ACCESS_TOKEN, file(.env.yaml):FB_ACCESS_TOKEN}
+    events:
+      - schedule: ${file(./scripts/serverless.config.js):schedule.CET11}
+      - http: GET food
