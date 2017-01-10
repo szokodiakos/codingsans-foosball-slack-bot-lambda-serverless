@@ -52,10 +52,11 @@ async function getKamra() {
       text: text,
     };
   } catch (err) {
+    console.error('getKamra error', err);
     return {
       title: 'Kamra',
       title_link: KAMRA_URL,
-      text: `Error: ${ err }`,
+      text: `Error: ${ JSON.stringify(err, void 0, 2) }`,
     };
   } finally {
     if (window) {
@@ -76,7 +77,7 @@ async function getAviator() {
       throw new Error('No posts today from Aviator');
     }
 
-    const filteredPost = _.filter(result.data, (post) => (/menü/g).test(post.message));
+    const filteredPost = _.filter(result.data, (post) => (/mai/gi).test(post.message));
 
     if (!filteredPost.length) {
       throw new Error('No menu posts today from Aviator');
@@ -84,7 +85,7 @@ async function getAviator() {
 
     const maiMenuPost = result.data[0].message;
 
-    const maiMenu = _.filter(maiMenuPost.split('\n'), (s) => /^\w*\~/.test(s)).join('\n');
+    const maiMenu = _.filter(maiMenuPost.split('\n'), (s) => /^\s*\~/.test(s)).join('\n');
 
     return {
       title: 'Aviator',
@@ -92,10 +93,11 @@ async function getAviator() {
       text: maiMenu,
     };
   } catch (err) {
+    console.error('getAviator error', err);
     return {
       title: 'Aviator',
       title_link: 'https://www.facebook.com/pg/aviatorbistro/posts/?ref=page_internal',
-      text: `Error: ${ err }`,
+      text: `Error: ${ JSON.stringify(err, void 0, 2) }`,
     };
   }
 }

@@ -17,9 +17,9 @@ functions:
   food:
     handler: handler.food
     environment:
-      SLACK_WEBHOOK: ${env:SLACK_WEBHOOK, file(.env.yaml):SLACK_WEBHOOK}
-      SLACK_CHANNEL: ${env:SLACK_CHANNEL, file(.env.yaml):SLACK_CHANNEL}
-      FB_ACCESS_TOKEN: ${env:FB_ACCESS_TOKEN, file(.env.yaml):FB_ACCESS_TOKEN}
+      SLACK_WEBHOOK: ${env:SLACK_WEBHOOK, file(.env.${opt:stage}.yaml):SLACK_WEBHOOK, file(.env.yaml):SLACK_WEBHOOK}
+      SLACK_CHANNEL: ${env:SLACK_CHANNEL, file(.env.${opt:stage}.yaml):SLACK_CHANNEL, file(.env.yaml):SLACK_CHANNEL}
+      FB_ACCESS_TOKEN: ${env:FB_ACCESS_TOKEN, file(.env.${opt:stage}.yaml):FB_ACCESS_TOKEN, file(.env.yaml):FB_ACCESS_TOKEN}
     events:
       - schedule: ${file(./scripts/serverless.config.js):schedule.CET11}
       - http: GET food
