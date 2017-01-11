@@ -10,6 +10,7 @@ import * as moment from 'moment-timezone';
 const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 const SLACK_CHANNEL = process.env.SLACK_CHANNEL;
+const ICONS = [':hamburger:', ':hotdog:', ':pizza:', ':taco:', ':burrito:', ':ramen:', ':stew:', ':curry:'];
 
 if (!SLACK_WEBHOOK || !SLACK_CHANNEL || !FB_ACCESS_TOKEN) {
   console.error('missing env variables');
@@ -47,7 +48,7 @@ async function getKamra() {
     const text = nodes.length && nodes.first().text();
 
     return {
-      title: 'Kamra',
+      title: 'Kamra :rice:',
       title_link: KAMRA_URL,
       text: text,
     };
@@ -88,7 +89,7 @@ async function getAviator() {
     const maiMenu = _.filter(maiMenuPost.split('\n'), (s) => /^\s*\~/.test(s)).join('\n');
 
     return {
-      title: 'Aviator',
+      title: 'Aviator :spaghetti:',
       title_link: 'https://www.facebook.com/pg/aviatorbistro/posts/?ref=page_internal',
       text: maiMenu,
     };
@@ -110,7 +111,7 @@ export const food = vandium(async function food(): Promise<any> {
 
   await slackWebhook({
     username: 'fooding-sans-bot',
-    icon_emoji: ':burrito:',
+    icon_emoji: ICONS[Math.trunc(Math.random() * ICONS.length)],
     channel: SLACK_CHANNEL,
     attachments,
   });
