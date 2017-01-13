@@ -57,7 +57,7 @@ async function getKamra() {
     return {
       title: 'Kamra :rice:',
       title_link: KAMRA_URL,
-      text: `Error: ${ err }`,
+      text: `${ err }`,
     };
   } finally {
     if (window) {
@@ -98,7 +98,7 @@ async function getAviator() {
     return {
       title: 'Aviator :spaghetti:',
       title_link: 'https://www.facebook.com/pg/aviatorbistro/posts/?ref=page_internal',
-      text: `Error: ${ err }`,
+      text: `${ err }`,
     };
   }
 }
