@@ -55,9 +55,9 @@ async function getKamra() {
   } catch (err) {
     console.error('getKamra error', err);
     return {
-      title: 'Kamra',
+      title: 'Kamra :rice:',
       title_link: KAMRA_URL,
-      text: `Error: ${ JSON.stringify(err, void 0, 2) }`,
+      text: `Error: ${ err }`,
     };
   } finally {
     if (window) {
@@ -96,9 +96,9 @@ async function getAviator() {
   } catch (err) {
     console.error('getAviator error', err);
     return {
-      title: 'Aviator',
+      title: 'Aviator :spaghetti:',
       title_link: 'https://www.facebook.com/pg/aviatorbistro/posts/?ref=page_internal',
-      text: `Error: ${ JSON.stringify(err, void 0, 2) }`,
+      text: `Error: ${ err }`,
     };
   }
 }
