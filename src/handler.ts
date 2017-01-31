@@ -4,26 +4,56 @@ import * as _ from 'lodash';
 import * as vandium from 'vandium';
 import * as Slack from 'slack-node';
 import * as jsdom from 'jsdom';
-import * as graph from 'fbgraph';
-import * as moment from 'moment-timezone';
+
+interface ICommand {
+  token?: string;
+  team_id?: string;
+  team_domain?: string;
+  channel_id?: string;
+  channel_name?: string;
+  user_id?: string;
+  user_name?: string;
+  command?: string; // /something
+  text?: string; // /something foo <- foo is the thext
+  response_url?: string;
+}
+
+interface IResponse {
+  statusCode: number;
+}
+
+interface IAttachment {
+  color?: string;
+  text?: string;
+  pretext?: string;
+}
+
+interface IPlayer {
+  name: string;
+  oldRating: number;
+  newRating: number;
+}
+
+interface ITeams {
+  teamOne: IPlayer[];
+  teamTwo: IPlayer[];
+}
 
 const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK;
-const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 const SLACK_CHANNEL = process.env.SLACK_CHANNEL;
-const ICONS = [':hamburger:', ':hotdog:', ':pizza:', ':taco:', ':burrito:', ':ramen:', ':stew:', ':curry:'];
 
-if (!SLACK_WEBHOOK || !SLACK_CHANNEL || !FB_ACCESS_TOKEN) {
+const GREEN_COLOR = '#36a64f';
+const YELLOW_COLOR = '#ffef60';
+const RED_COLOR = '#ff6060';
+
+if (!SLACK_WEBHOOK || !SLACK_CHANNEL) {
   console.error('missing env variables');
   throw new Error('missing env variables');
 }
 
-const KAMRA_URL = 'http://kamraetelbar.hu/kamra_etelbar_mai_menu.html';
-const KAMRA_SELECTOR = '.shop_today_title';
-
 const slack = new Slack();
 
 slack.setWebhook(SLACK_WEBHOOK);
-graph.setAccessToken(FB_ACCESS_TOKEN);
 
 function slackWebhook(options: Slack.WebhookOptions) {
   return new Promise((resolve, reject) => {
@@ -36,84 +66,66 @@ function slackWebhook(options: Slack.WebhookOptions) {
   });
 }
 
-async function getKamra() {
-  let window: any;
-  try {
-    window = await new Promise(
-      (resolve, reject) => jsdom.env(KAMRA_URL, ['http://code.jquery.com/jquery.js'], (err, res) => err ? reject(err) : resolve(res))
-    );
+const renderMatchUpdate = (teamOne: IPlayer[], teamTwo: IPlayer[]) => {
+  const vsLabel = `${teamOne.join(' ')} vs ${teamTwo.join(' ')}`;
+  let isFirst = true;
 
-    const nodes = window.$(KAMRA_SELECTOR);
+  const attachments = [...teamOne, ...teamTwo].map(teamMember => {
+    const { oldRating, newRating, name } = teamMember;
 
-    const text = nodes.length && nodes.first().text();
-
-    return {
-      title: 'Kamra :rice:',
-      title_link: KAMRA_URL,
-      text: text,
-    };
-  } catch (err) {
-    console.error('getKamra error', err);
-    return {
-      title: 'Kamra :rice:',
-      title_link: KAMRA_URL,
-      text: `${ err }`,
-    };
-  } finally {
-    if (window) {
-      window.close();
+    const attachment: IAttachment = {};
+    if (newRating > oldRating) {
+      attachment.color = GREEN_COLOR;
+    } else if (newRating === oldRating) {
+      attachment.color = YELLOW_COLOR;
+    } else {
+      attachment.color = RED_COLOR;
     }
-  }
+
+    attachment.text = renderMatchUpdateText(name, oldRating, newRating);
+
+    if (isFirst) {
+      attachment.pretext = `Rating changes after ${vsLabel} match:`;
+      isFirst = false;
+    }
+
+    return attachment;
+  });
+  return attachments;
 }
 
-async function getAviator() {
-  try {
-    const result: { data: { message: string }[] } = await new Promise<any>(
-      (resolve, reject) => graph.get(
-        `/aviatorbistro/posts?since=${ moment().format('YYYY-MM-DD') }`,
-        (err: any, res: any) => err ? reject(err) : resolve(res))
-    );
+const renderMatchUpdateText = (name: string, oldRating: number, newRating: number) =>
+  [
+    `${name}: ${oldRating} → ${newRating}`,
+    newRating >= oldRating ?
+      `(+${newRating - oldRating})` :
+      `(-${oldRating - newRating})`
+  ].join(' ');
 
-    if (!result.data.length) {
-      throw new Error('No posts today from Aviator');
-    }
+async function parsePlayers(text?: string): Promise<ITeams | undefined> {
+  if (!text) {
+    return;
+  }
+  const [rawTeamOne, rawTeamTwo] = text.split('vs.');
+};
 
-    const filteredPost = _.filter(result.data, (post) => (/mai/gi).test(post.message));
+export const postMatch = vandium(async function postMatch(): Promise<IResponse> {
+  const command: ICommand = { text: '@alice @bob vs. @chloe @dave 9-2' };
+  const { text } = command;
 
-    if (!filteredPost.length) {
-      throw new Error('No menu posts today from Aviator');
-    }
-
-    const maiMenuPost = result.data[0].message;
-
-    const maiMenu = _.filter(maiMenuPost.split('\n'), (s) => /^\s*\~/.test(s)).join('\n');
-
+  const parsedPlayers = await parsePlayers(text);
+  if (!parsedPlayers) {
     return {
-      title: 'Aviator :spaghetti:',
-      title_link: 'https://www.facebook.com/pg/aviatorbistro/posts/?ref=page_internal',
-      text: maiMenu,
-    };
-  } catch (err) {
-    console.error('getAviator error', err);
-    return {
-      title: 'Aviator :spaghetti:',
-      title_link: 'https://www.facebook.com/pg/aviatorbistro/posts/?ref=page_internal',
-      text: `${ err }`,
+      statusCode: 400,
     };
   }
-}
 
-export const food = vandium(async function food(): Promise<any> {
-  const attachments = await Promise.all([
-    getKamra(),
-    getAviator(),
-  ]);
-
+  const { teamOne, teamTwo } = parsedPlayers;
   await slackWebhook({
-    username: 'fooding-sans-bot',
-    icon_emoji: ICONS[Math.trunc(Math.random() * ICONS.length)],
+    username: 'csocso-sans-bot',
+    icon_emoji: ':soccer:',
     channel: SLACK_CHANNEL,
-    attachments,
+    attachments: renderMatchUpdate(teamOne, teamTwo),
   });
 
   return {
